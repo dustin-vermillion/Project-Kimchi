@@ -1,0 +1,160 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SH110X.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SH1106G display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// =====================
+// EMOTIONS
+// =====================
+
+enum Emotion {
+  IDLE,
+  BLINK,
+  LOOK_LEFT,
+  LOOK_RIGHT,
+  HAPPY,
+  EXCITED,
+  SAD,
+  CONFUSED,
+  ANNOYED,
+  LOVE,
+  SHOCKED
+};
+
+Emotion currentEmotion = IDLE;
+
+// =====================
+// FACE DATABASE
+// =====================
+
+String getFace(Emotion mood)
+{
+  switch (mood)
+  {
+    case IDLE:       return "(^_^)";
+    case BLINK:      return "(-_-)";
+    case LOOK_LEFT:  return "(O.o)";
+    case LOOK_RIGHT: return "(o.O)";
+    case HAPPY:      return "(^.^)";
+    case EXCITED:    return "(^o^)";
+    case SAD:        return "(T_T)";
+    case CONFUSED:   return "(o_o)";
+    case ANNOYED:    return "(>.<)";
+    case LOVE:       return "(^3^)";
+    case SHOCKED:    return "(O_O)";
+  }
+
+  return "(^_^)";
+}
+
+// =====================
+// DRAW FACE
+// =====================
+
+void drawFace()
+{
+  display.clearDisplay();
+
+  display.setTextColor(SH110X_WHITE);
+  display.setTextSize(2);
+
+  String face = getFace(currentEmotion);
+
+  int16_t x1, y1;
+  uint16_t w, h;
+
+  display.getTextBounds(face, 0, 0, &x1, &y1, &w, &h);
+
+  int x = (SCREEN_WIDTH - w) / 2;
+  int y = (SCREEN_HEIGHT - h) / 2;
+
+  display.setCursor(x, y);
+  display.print(face);
+
+  display.display();
+}
+
+// =====================
+// IDLE PERSONALITY
+// =====================
+
+void idleAnimation()
+{
+  int r = random(100);
+
+  if (r < 50)
+  {
+    currentEmotion = IDLE;
+  }
+  else if (r < 65)
+  {
+    currentEmotion = BLINK;
+  }
+  else if (r < 75)
+  {
+    currentEmotion = LOOK_LEFT;
+  }
+  else if (r < 85)
+  {
+    currentEmotion = LOOK_RIGHT;
+  }
+  else if (r < 92)
+  {
+    currentEmotion = HAPPY;
+  }
+  else if (r < 96)
+  {
+    currentEmotion = CONFUSED;
+  }
+  else
+  {
+    currentEmotion = EXCITED;
+  }
+
+  drawFace();
+}
+
+// =====================
+// SETUP
+// =====================
+
+void setup()
+{
+  Serial.begin(115200);
+
+  // OLED Wiring:
+  // SDA -> GPIO21
+  // SCL -> GPIO22
+
+  Wire.begin(21, 22);
+
+  if (!display.begin(0x3C, true))
+  {
+    Serial.println("OLED initialization failed!");
+    while (1);
+  }
+
+  randomSeed(micros());
+
+  currentEmotion = IDLE;
+  drawFace();
+}
+
+// =====================
+// LOOP
+// =====================
+
+unsigned long lastUpdate = 0;
+
+void loop()
+{
+  if (millis() - lastUpdate > 1500)
+  {
+    lastUpdate = millis();
+    idleAnimation();
+  }
+}

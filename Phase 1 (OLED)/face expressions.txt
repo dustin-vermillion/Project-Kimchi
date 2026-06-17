@@ -1,0 +1,125 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SH110X.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SH1106G display(
+  SCREEN_WIDTH,
+  SCREEN_HEIGHT,
+  &Wire,
+  -1
+);
+
+// Pupil position
+int pupilX = 0;
+int pupilY = 0;
+
+// Blink
+bool blinking = false;
+unsigned long lastBlink = 0;
+unsigned long nextBlink = 0;
+
+// Looking direction timer
+unsigned long lastLook = 0;
+unsigned long nextLook = 0;
+
+void drawFace()
+{
+  display.clearDisplay();
+
+  int leftEyeX = 40;
+  int rightEyeX = 88;
+  int eyeY = 28;
+
+  if (blinking)
+  {
+    // Closed eyes
+    display.fillRoundRect(leftEyeX - 12, eyeY - 2, 24, 4, 2, SH110X_WHITE);
+    display.fillRoundRect(rightEyeX - 12, eyeY - 2, 24, 4, 2, SH110X_WHITE);
+  }
+  else
+  {
+    // Eye whites
+    display.fillCircle(leftEyeX, eyeY, 12, SH110X_WHITE);
+    display.fillCircle(rightEyeX, eyeY, 12, SH110X_WHITE);
+
+    // Pupils
+    display.fillCircle(leftEyeX + pupilX, eyeY + pupilY, 4, SH110X_BLACK);
+    display.fillCircle(rightEyeX + pupilX, eyeY + pupilY, 4, SH110X_BLACK);
+  }
+
+  // Cute mouth
+  display.drawLine(56, 50, 72, 50, SH110X_WHITE);
+
+  display.display();
+}
+
+void setup()
+{
+  display.begin(0x3C, true);
+
+  randomSeed(millis());
+
+  nextBlink = millis() + random(3000, 6000);
+  nextLook = millis() + random(1500, 3000);
+}
+
+void loop()
+{
+  unsigned long now = millis();
+
+  // Random eye direction
+  if (now > nextLook)
+  {
+    int dir = random(0, 5);
+
+    switch (dir)
+    {
+      case 0: // center
+        pupilX = 0;
+        pupilY = 0;
+        break;
+
+      case 1: // left
+        pupilX = -4;
+        pupilY = 0;
+        break;
+
+      case 2: // right
+        pupilX = 4;
+        pupilY = 0;
+        break;
+
+      case 3: // up
+        pupilX = 0;
+        pupilY = -3;
+        break;
+
+      case 4: // down
+        pupilX = 0;
+        pupilY = 3;
+        break;
+    }
+
+    nextLook = now + random(1500, 4000);
+  }
+
+  // Blink
+  if (now > nextBlink && !blinking)
+  {
+    blinking = true;
+    lastBlink = now;
+  }
+
+  if (blinking && (now - lastBlink > 150))
+  {
+    blinking = false;
+    nextBlink = now + random(3000, 7000);
+  }
+
+  drawFace();
+
+  delay(20);
+}
